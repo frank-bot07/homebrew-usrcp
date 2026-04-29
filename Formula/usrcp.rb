@@ -9,7 +9,7 @@ class Usrcp < Formula
 
   def install
     cd "packages/usrcp-local" do
-      system "npm", "install"
+      system "npm", "ci"
       system "npm", "run", "build"
       system "npm", "install", *std_npm_args
       bin.install_symlink Dir["#{libexec}/bin/*"]
