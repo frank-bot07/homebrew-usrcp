@@ -9,14 +9,11 @@ class Usrcp < Formula
 
   def install
     cd "packages/usrcp-local" do
-      system "npm", "install", "--omit=dev"
+      system "npm", "install"
       system "npm", "run", "build"
-      libexec.install Dir["*"]
+      system "npm", "install", *std_npm_args
+      bin.install_symlink Dir["#{libexec}/bin/*"]
     end
-
-    chmod 0755, libexec/"dist/index.js"
-    bin.install_symlink libexec/"dist/index.js" => "usrcp"
-    bin.install_symlink libexec/"dist/index.js" => "usrcp-local"
   end
 
   test do
