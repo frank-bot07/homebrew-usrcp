@@ -1,8 +1,8 @@
 class Usrcp < Formula
   desc "Encrypted local AI memory protocol — your context, your machine, your keys"
   homepage "https://github.com/frank-bot07/usrcp"
-  url "https://github.com/frank-bot07/usrcp/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "706bbf6c11fdd7426bce525504c637be05ee3df14074355e83fd40a24389c5ea"
+  url "https://github.com/frank-bot07/usrcp/archive/refs/tags/v0.1.1.tar.gz"
+  sha256 "d17af3814e4f2055bc419dc89ad046d4f9bb38b55c05b88283b45c884e15c451"
   license "Apache-2.0"
 
   depends_on "node"
