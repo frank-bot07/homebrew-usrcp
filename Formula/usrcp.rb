@@ -17,7 +17,7 @@ class Usrcp < Formula
   end
 
   test do
-    output = shell_output("#{bin}/usrcp --help 2>&1", 1)
+    output = shell_output("\"#{bin}/usrcp\" --help 2>&1", 1)
     assert_match "usrcp", output
   end
 end
