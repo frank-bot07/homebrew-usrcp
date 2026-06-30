@@ -1,0 +1,35 @@
+name: brew-test
+
+# Verifies the usrcp formula installs + tests on a real macOS runner with a
+# current Homebrew (including its npm release-cooldown). Manual trigger only:
+# fresh npm releases are blocked by Homebrew's 1-day --min-release-age, so this
+# is meant to be dispatched once the just-published deps have aged past 24h.
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use this checkout as the frank-bot07/usrcp tap
+        run: |
+          TAP_DIR="$(brew --repository)/Library/Taps/frank-bot07/homebrew-usrcp"
+          mkdir -p "$(dirname "$TAP_DIR")"
+          rm -rf "$TAP_DIR"
+          ln -s "$GITHUB_WORKSPACE" "$TAP_DIR"
+          brew tap-info frank-bot07/usrcp
+
+      - name: brew install usrcp
+        run: brew install --verbose frank-bot07/usrcp/usrcp
+
+      - name: brew test usrcp
+        run: brew test --verbose frank-bot07/usrcp/usrcp
+
+      - name: Smoke the installed binary
+        run: |
+          usrcp --help 2>&1 | head -5
+          export HOME="$(mktemp -d)"
+          usrcp init --dev
+          usrcp status
