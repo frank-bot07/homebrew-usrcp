@@ -1,26 +1,30 @@
 class Usrcp < Formula
   desc "Encrypted local AI memory protocol - your context, your machine, your keys"
   homepage "https://github.com/frank-bot07/usrcp"
-  url "https://github.com/frank-bot07/usrcp/archive/refs/tags/v0.1.7.tar.gz"
-  sha256 "0b44de7d33d013e434a8eb4d18aeb7b42809499aa327baf47d98b7e94c22f648"
+  # Install the published npm package (which ships prebuilt dist and resolves
+  # its own deps — usrcp-core etc. — from the registry). The formula is
+  # deliberately decoupled from the monorepo's internal package layout so a
+  # refactor behind the public npm contract can't break the brew install.
+  url "https://registry.npmjs.org/usrcp-local/-/usrcp-local-0.2.0.tgz"
+  sha256 "11ea1d4ee9aea33cf5d60827674be7289de6a2f02353cdb6bf5830a7af8e3b8b"
   license "Apache-2.0"
 
-  depends_on "node@22"
+  livecheck do
+    url "https://registry.npmjs.org/usrcp-local/latest"
+    regex(/"version":\s*"([^"]+)"/i)
+  end
+
+  depends_on "node"
 
   def install
-    ENV.prepend_path "PATH", Formula["node@22"].opt_bin
-
-    cd "packages/usrcp-local" do
-      system "npm", "ci"
-      system "npm", "run", "build"
-      system "npm", "install", *std_npm_args
-    end
-
+    system "npm", "install", *std_npm_args
+    # std_npm_args runs npm with --ignore-scripts (Homebrew's default), so the
+    # package's postinstall did not rebuild the better-sqlite3 native binding.
+    # Rebuild it against this Node so the ledger opens.
     cd libexec/"lib/node_modules/usrcp-local" do
-      rm_r "node_modules/better-sqlite3/build", force: true
+      rm_rf "node_modules/better-sqlite3/build"
       system "npm", "rebuild", "better-sqlite3"
     end
-
     bin.install_symlink Dir["#{libexec}/bin/*"]
   end
 
