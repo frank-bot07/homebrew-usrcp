@@ -7,7 +7,8 @@ name: auto-bump
 # Design: a scheduled poller (not a tag trigger). Each run checks npm for the
 # latest usrcp-local, and if it's newer than the formula AND has aged past the
 # cooldown, it bumps the formula, PROVES it with a real macOS brew install+test
-# in this same job, and opens a PR. A human merges the green PR. This naturally
+# in this same job, opens a PR, and auto-merges it (the in-job brew test is the
+# green gate — the PR is a record + revert point, not a review gate). Naturally
 # handles the cooldown delay (it just waits for the next day) and self-heals
 # drift (it re-proposes until merged), so a release can never silently leave
 # brew behind — and the formula is never proposed unverified.
@@ -82,7 +83,7 @@ jobs:
           brew install frank-bot07/usrcp/usrcp
           brew test frank-bot07/usrcp/usrcp
 
-      - name: Open bump PR
+      - name: Open bump PR and auto-merge (verified green)
         if: steps.decide.outputs.proceed == '1'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -97,4 +98,6 @@ jobs:
           git push -u origin "$branch"
           gh pr create --base main --head "$branch" \
             --title "usrcp $v (auto-bump)" \
-            --body "Automated bump to \`usrcp-local@$v\`, published >${MIN_AGE_HOURS}h ago (past Homebrew's npm release cooldown). \`brew install\` + \`brew test\` **passed on macOS in this workflow run** before the PR was opened. Safe to merge."
+            --body "Automated bump to \`usrcp-local@$v\`, published >${MIN_AGE_HOURS}h ago (past Homebrew's npm release cooldown). \`brew install\` + \`brew test\` **passed on macOS in this workflow run** before merge — auto-merged on green."
+          # The in-job brew install+test above is the green gate; merge the record PR.
+          gh pr merge "$branch" --squash --delete-branch
