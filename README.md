@@ -29,7 +29,7 @@ usrcp serve          # start the MCP server
 
 Adapters available out of the box (no extra install): `terminal` (Claude Code, Cursor, Cline, Antigravity, OpenCode), `mcp-agent`, `openclaw`.
 
-Capture adapters (Discord, Slack, Telegram, iMessage, Obsidian, Linear, Chrome extension) currently require the source-clone path documented in the [main repo](https://github.com/frank-bot07/usrcp). They'll move under brew in a future release once the package layout supports it.
+Capture adapters (Discord, Slack, Telegram, iMessage, Obsidian, Linear, GitHub, Gmail, Google Calendar, Claude Code, Chrome extension) are published on **npm** — install the ones you want alongside the brew CLI, e.g. `npm install usrcp-discord`. See the [main repo](https://github.com/frank-bot07/usrcp) for per-adapter setup.
 
 ## Update
 
