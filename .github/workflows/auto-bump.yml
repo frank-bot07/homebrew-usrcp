@@ -98,6 +98,6 @@ jobs:
           git push -u origin "$branch"
           gh pr create --base main --head "$branch" \
             --title "usrcp $v (auto-bump)" \
-            --body "Automated bump to \`usrcp-local@$v\`, published >${MIN_AGE_HOURS}h ago (past Homebrew's npm release cooldown). \`brew install\` + \`brew test\` **passed on macOS in this workflow run** before merge — auto-merged on green."
+            --body "@frank-bot07 — brew auto-bumped to \`usrcp-local@$v\` and this PR was auto-merged, so \`brew upgrade usrcp\` now serves $v. Published >${MIN_AGE_HOURS}h ago (past Homebrew's npm release cooldown); \`brew install\` + \`brew test\` **passed on macOS in this workflow run** before merge."
           # The in-job brew install+test above is the green gate; merge the record PR.
           gh pr merge "$branch" --squash --delete-branch
