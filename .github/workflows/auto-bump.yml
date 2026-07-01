@@ -1,0 +1,100 @@
+name: auto-bump
+
+# Keeps the usrcp formula in sync with the published usrcp-local npm package,
+# without manual url/sha edits and without ever pointing brew at a version that
+# is still inside Homebrew's 1-day npm release cooldown.
+#
+# Design: a scheduled poller (not a tag trigger). Each run checks npm for the
+# latest usrcp-local, and if it's newer than the formula AND has aged past the
+# cooldown, it bumps the formula, PROVES it with a real macOS brew install+test
+# in this same job, and opens a PR. A human merges the green PR. This naturally
+# handles the cooldown delay (it just waits for the next day) and self-heals
+# drift (it re-proposes until merged), so a release can never silently leave
+# brew behind — and the formula is never proposed unverified.
+on:
+  schedule:
+    - cron: "0 16 * * *" # daily 16:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Homebrew's cooldown is 1 day; require a bit more so we never race it.
+env:
+  MIN_AGE_HOURS: "25"
+
+jobs:
+  bump:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decide whether to bump
+        id: decide
+        run: |
+          set -euo pipefail
+          latest=$(npm view usrcp-local version)
+          current=$(grep -oE 'usrcp-local-[0-9]+\.[0-9]+\.[0-9]+\.tgz' Formula/usrcp.rb \
+                    | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          echo "latest=$latest  current=$current"
+          if [ "$latest" = "$current" ]; then
+            echo "formula already at $latest — nothing to do"; exit 0
+          fi
+          # Cooldown gate: how old is the latest publish?
+          pub=$(npm view "usrcp-local@$latest" time --json | node -e \
+            "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const t=JSON.parse(d);process.stdout.write(t['$latest']||'')})")
+          age_h=$(node -e "process.stdout.write(String(Math.floor((Date.now()-Date.parse('$pub'))/3600000)))")
+          echo "latest published $pub -> ${age_h}h old (need >= ${MIN_AGE_HOURS}h)"
+          if [ "$age_h" -lt "$MIN_AGE_HOURS" ]; then
+            echo "still inside Homebrew cooldown — will retry on the next scheduled run"; exit 0
+          fi
+          # Idempotency: skip if a bump branch for this version already exists.
+          if git ls-remote --exit-code --heads origin "auto-bump-$latest" >/dev/null 2>&1; then
+            echo "branch auto-bump-$latest already exists — skipping"; exit 0
+          fi
+          {
+            echo "proceed=1"
+            echo "version=$latest"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Bump formula (url + sha256)
+        if: steps.decide.outputs.proceed == '1'
+        run: |
+          set -euo pipefail
+          v="${{ steps.decide.outputs.version }}"
+          url="https://registry.npmjs.org/usrcp-local/-/usrcp-local-$v.tgz"
+          curl -fsSL "$url" -o /tmp/pkg.tgz
+          sha=$(shasum -a 256 /tmp/pkg.tgz | cut -d' ' -f1)
+          sed -i '' -E \
+            -e "s#usrcp-local-[0-9]+\.[0-9]+\.[0-9]+\.tgz#usrcp-local-$v.tgz#" \
+            -e "s#sha256 \"[a-f0-9]{64}\"#sha256 \"$sha\"#" \
+            Formula/usrcp.rb
+          echo "bumped to $v ($sha)"
+          grep -E 'url|sha256' Formula/usrcp.rb | head -3
+
+      - name: Prove it — brew install + test on macOS
+        if: steps.decide.outputs.proceed == '1'
+        run: |
+          set -euo pipefail
+          tap="$(brew --repository)/Library/Taps/frank-bot07/homebrew-usrcp"
+          mkdir -p "$(dirname "$tap")"; rm -rf "$tap"; ln -s "$GITHUB_WORKSPACE" "$tap"
+          brew install frank-bot07/usrcp/usrcp
+          brew test frank-bot07/usrcp/usrcp
+
+      - name: Open bump PR
+        if: steps.decide.outputs.proceed == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          v="${{ steps.decide.outputs.version }}"
+          branch="auto-bump-$v"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git commit -am "usrcp $v (auto-bump, verified on macOS)"
+          git push -u origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "usrcp $v (auto-bump)" \
+            --body "Automated bump to \`usrcp-local@$v\`, published >${MIN_AGE_HOURS}h ago (past Homebrew's npm release cooldown). \`brew install\` + \`brew test\` **passed on macOS in this workflow run** before the PR was opened. Safe to merge."
