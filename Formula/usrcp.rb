@@ -5,8 +5,8 @@ class Usrcp < Formula
   # its own deps — usrcp-core etc. — from the registry). The formula is
   # deliberately decoupled from the monorepo's internal package layout so a
   # refactor behind the public npm contract can't break the brew install.
-  url "https://registry.npmjs.org/usrcp-local/-/usrcp-local-0.2.5.tgz"
-  sha256 "5db7b77bcc77b215e5f208daa9c253140f9da71031722add768c4e386e227856"
+  url "https://registry.npmjs.org/usrcp-local/-/usrcp-local-0.2.6.tgz"
+  sha256 "6f084744aac2c3df73543483191b07a8b16baf2e3ea991c8007f28813dbebf12"
   license "Apache-2.0"
 
   livecheck do
