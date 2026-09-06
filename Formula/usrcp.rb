@@ -18,13 +18,6 @@ class Usrcp < Formula
 
   def install
     system "npm", "install", *std_npm_args
-    # std_npm_args runs npm with --ignore-scripts (Homebrew's default), so the
-    # package's postinstall did not rebuild the better-sqlite3 native binding.
-    # Rebuild it against this Node so the ledger opens.
-    cd libexec/"lib/node_modules/usrcp-local" do
-      rm_rf "node_modules/better-sqlite3/build"
-      system "npm", "rebuild", "better-sqlite3"
-    end
     bin.install_symlink Dir["#{libexec}/bin/*"]
   end
 
